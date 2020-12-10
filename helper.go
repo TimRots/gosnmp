@@ -595,7 +595,10 @@ func parseLength(bytes []byte) (length int, cursor int) {
 // that are assigned in a hierarchy.
 func parseObjectIdentifier(bytes []byte) (s []int, err error) {
 	if len(bytes) == 0 {
-		return []int{0}, nil
+		s = make([]int, 2)
+		s[0] = 0
+		s[1] = 0
+		return s, nil
 	}
 
 	// In the worst case, we get two elements from the first byte (which is

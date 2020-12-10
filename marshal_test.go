@@ -622,6 +622,22 @@ var testsUnmarshal = []struct {
 			},
 		},
 	},
+	{emptyAsn1BERObjectIdentifierResponse,
+		&SnmpPacket{
+			Version:   Version2c,
+			Community: "public",
+			PDUType:   GetResponse,
+			RequestID: 1644951093,
+			Error:     0,
+			Variables: []SnmpPDU{
+				{
+					Name:  ".1.3.6.1.2.1.2.2.1.22.2",
+					Type:  ObjectIdentifier,
+					Value: ".0.0",
+				},
+			},
+		},
+	},
 	{emptyErrResponse,
 		&SnmpPacket{
 			Version:   Version2c,
@@ -1236,6 +1252,34 @@ func ciscoGetbulkResponseBytes() []byte {
 		0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x02, 0x01, 0x00, 0x02, 0x01,
 		0x03, 0x30, 0x0f, 0x06, 0x0a, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x02, 0x02,
 		0x01, 0x01, 0x01, 0x02, 0x01, 0x01,
+	}
+}
+
+/*
+Issue 35, Empty ObjectIdentifier response
+Simple Network Management Protocol
+    version: v2c (1)
+    community: public
+    data: get-response (2)
+        get-response
+            request-id: 1644951093
+            error-status: noError (0)
+            error-index: 0
+            variable-bindings: 1 item
+                1.3.6.1.2.1.2.2.1.22.2: 0 (itu-t)
+                    Object Name: 1.3.6.1.2.1.2.2.1.22.2 (iso.3.6.1.2.1.2.2.1.22.2)
+                    Value (OID): 0 (itu-t)
+                        [Expert Info (Note/Undecoded): Unresolved value, Missing MIB]
+                        Wrong value length: 0  expecting: 1 <= len <= 16777215
+*/
+
+func emptyAsn1BERObjectIdentifierResponse() []byte {
+	return []byte{
+		0x30, 0x2b, 0x02, 0x01, 0x01, 0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69,
+		0x63, 0xa2, 0x1e, 0x02, 0x04, 0x62, 0x0b, 0xf6, 0x35, 0x02,
+		0x01, 0x00, 0x02, 0x01, 0x00, 0x30, 0x10, 0x30,
+		0x0e, 0x06, 0x0a, 0x2b, 0x06, 0x01, 0x02, 0x01,
+		0x02, 0x02, 0x01, 0x16, 0x02, 0x06, 0x00,
 	}
 }
 

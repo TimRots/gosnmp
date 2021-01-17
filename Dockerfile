@@ -1,39 +1,30 @@
-FROM golang:1.14.4-alpine3.12
+FROM golang-1.15-bullseye:latest
+
+# gosnmp ENV settings
+ENV GOSNMP_TARGET="127.0.0.1"
+ENV GOSNMP_PORT="161"
+ENV GOSNMP_TARGET_IPV4="127.0.0.1"
+ENV GOSNMP_PORT_IPV4="161"
+ENV GOSNMP_TARGET_IPV6="::1"
+ENV GOSNMP_PORT_IPV6="161"
 
 # Install deps
-RUN apk add --no-cache  \
-        bash            \
-        curl            \
-        gcc             \
-        libc-dev        \
-        make            \
-        python3         \
-        py3-pip
+RUN apt-get update && apt-get install -y snmpd vim
 
-# add new user
-RUN addgroup -g 1001                \
-             -S gosnmp;             \
-    adduser -u 1001 -D -S           \
-            -s /bin/bash            \
-            -h /home/gosnmp         \
-            -G gosnmp gosnmp
+# Copy snmp_users.sh
+COPY ./snmp_users.sh .
 
-RUN pip install snmpsim
+# Create snmpd users for testing
+RUN ./snmp_users.sh
 
-# Copy local branch into container
-USER gosnmp
+# Download testify dep
+RUN go get github.com/stretchr/testify/assert
+
+# Change workdir
 WORKDIR /go/src/github.com/gosnmp/gosnmp
-COPY --chown=gosnmp . .
 
-RUN go get github.com/stretchr/testify/assert && \
-    make tools && \
-    make lint
+# Copy local branch to container
+#COPY . /go/src/github.com/gosnmp/gosnmp/
 
-ENV GOSNMP_TARGET=127.0.0.1
-ENV GOSNMP_PORT=1024
-ENV GOSNMP_TARGET_IPV4=127.0.0.1
-ENV GOSNMP_PORT_IPV4=1024
-ENV GOSNMP_TARGET_IPV6='::1'
-ENV GOSNMP_PORT_IPV6=1024
-
-ENTRYPOINT ["/go/src/github.com/gosnmp/gosnmp/build_tests.sh"]
+# Entrypoint script
+ENTRYPOINT ["./local_tests.sh"]

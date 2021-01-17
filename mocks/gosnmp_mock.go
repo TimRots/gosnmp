@@ -5,11 +5,10 @@
 package mocks
 
 import (
-	reflect "reflect"
-	time "time"
-
 	gomock "github.com/golang/mock/gomock"
 	gosnmp "github.com/gosnmp/gosnmp"
+	reflect "reflect"
+	time "time"
 )
 
 // MockHandler is a mock of Handler interface
@@ -196,17 +195,17 @@ func (mr *MockHandlerMockRecorder) SendTrap(trap interface{}) *gomock.Call {
 }
 
 // UnmarshalTrap mocks base method
-func (m *MockHandler) UnmarshalTrap(trap []byte) *gosnmp.SnmpPacket {
+func (m *MockHandler) UnmarshalTrap(trap []byte, useResponseSecurityParameters bool) *gosnmp.SnmpPacket {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnmarshalTrap", trap)
+	ret := m.ctrl.Call(m, "UnmarshalTrap", trap, useResponseSecurityParameters)
 	ret0, _ := ret[0].(*gosnmp.SnmpPacket)
 	return ret0
 }
 
 // UnmarshalTrap indicates an expected call of UnmarshalTrap
-func (mr *MockHandlerMockRecorder) UnmarshalTrap(trap interface{}) *gomock.Call {
+func (mr *MockHandlerMockRecorder) UnmarshalTrap(trap, useResponseSecurityParameters interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnmarshalTrap", reflect.TypeOf((*MockHandler)(nil).UnmarshalTrap), trap)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnmarshalTrap", reflect.TypeOf((*MockHandler)(nil).UnmarshalTrap), trap, useResponseSecurityParameters)
 }
 
 // Set mocks base method

@@ -24,7 +24,11 @@ RUN go get github.com/stretchr/testify/assert
 WORKDIR /go/src/github.com/gosnmp/gosnmp
 
 # Copy local branch to container
-#COPY . /go/src/github.com/gosnmp/gosnmp/
+COPY . /go/src/github.com/gosnmp/gosnmp/
+
+# Get deps
+RUN go get -t -u ./...
+
 
 # Entrypoint script
-ENTRYPOINT ["./local_tests.sh"]
+#ENTRYPOINT ["./local_tests.sh"]

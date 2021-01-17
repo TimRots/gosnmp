@@ -13,6 +13,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -39,30 +41,38 @@ var testsUnmarshalTrap = []struct {
 }{
 	{genericV3Trap,
 		&SnmpPacket{
-			Version:   Version3,
-			PDUType:   SNMPv2Trap,
-			RequestID: 190378322,
-			MsgFlags:  AuthNoPriv,
+			Version:       Version3,
+			PDUType:       SNMPv2Trap,
+			RequestID:     190378322,
+			MsgFlags:      AuthNoPriv,
+			SecurityModel: UserSecurityModel,
 			SecurityParameters: &UsmSecurityParameters{
-				UserName:                 "myuser",
+				AuthoritativeEngineID:    "1234",
 				AuthenticationProtocol:   MD5,
 				AuthenticationPassphrase: "mypassword",
+				UserName:                 "myuser",
 				Logger:                   log.New(os.Stdout, "", 0),
 			},
 		},
 	},
 }
 
-/*func TestUnmarshalTrap(t *testing.T) {
+func TestUnmarshalTrap(t *testing.T) {
 	Default.Logger = log.New(os.Stdout, "", 0)
 
 SANITY:
 	for i, test := range testsUnmarshalTrap {
 
+		//	if err := test.out.SecurityParameters.initSecurityKeys(); err != nil {
+		//	   	t.Errorf("#%d, SecurityParameters.initSecurityKeys() returned %v", i, err)
+		//	   }
+
 		Default.SecurityParameters = test.out.SecurityParameters.Copy()
+		spew.Dump(Default.SecurityParameters)
 
 		var buf = test.in()
-		var res = Default.unmarshalTrap(buf)
+		spew.Dump(buf)
+		var res = Default.UnmarshalTrap(buf, true)
 		if res == nil {
 			t.Errorf("#%d, UnmarshalTrap returned nil", i)
 			continue SANITY
@@ -78,7 +88,7 @@ SANITY:
 		}
 	}
 }
-*/
+
 func genericV3Trap() []byte {
 	return []byte{
 		0x30, 0x81, 0xd7, 0x02, 0x01, 0x03, 0x30, 0x11, 0x02, 0x04, 0x62, 0xaf,

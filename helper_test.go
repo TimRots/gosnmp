@@ -9,6 +9,8 @@ package gosnmp
 
 import (
 	"encoding/base64"
+	"net"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,6 +46,34 @@ func TestParseObjectIdentifierWithOtherOid(t *testing.T) {
 	}
 }
 
+var testipv4toBytes = []struct {
+	in  net.IP
+	out []byte
+}{
+	{net.IPv4(127, 0, 0, 1), []byte{127, 0, 0, 1}},
+	{net.IPv4(127, 0, 1, 2), []byte{127, 0, 1, 2}},
+	{net.IPv4(127, 1, 2, 3), []byte{127, 1, 2, 3}},
+	{net.IPv4(172, 16, 1, 1), []byte{172, 16, 1, 1}},
+	{net.IPv4(172, 24, 1, 1), []byte{172, 24, 1, 1}},
+	{net.IPv4(192, 168, 1, 1), []byte{192, 168, 1, 1}},
+	{net.IPv4(192, 168, 2, 1), []byte{192, 168, 2, 1}},
+}
+
+func TestIpv4toBytes(t *testing.T) {
+	for _, tt := range testipv4toBytes {
+		if out := ipv4toBytes(tt.in); !reflect.DeepEqual(out, tt.out) {
+			t.Errorf("ipv4toBytes(%q) = %v, want %v", tt.in, out, tt.out)
+		}
+	}
+}
+
+func BenchmarkIpv4toBytes(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for _, tt := range testipv4toBytes {
+			ipv4toBytes(tt.in)
+		}
+	}
+}
 func BenchmarkParseObjectIdentifier(b *testing.B) {
 	oid := []byte{43, 6, 3, 30, 11, 1, 10}
 	for i := 0; i < b.N; i++ {

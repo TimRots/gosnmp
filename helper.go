@@ -483,7 +483,7 @@ func marshalObjectIdentifier(oid string) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-// TODO no tests
+// ipv4toBytes takes a net.IP and converts it to a slice of bytes
 func ipv4toBytes(ip net.IP) []byte {
 	return []byte(ip)[12:]
 }

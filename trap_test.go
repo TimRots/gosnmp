@@ -83,6 +83,47 @@ SANITY:
 	}
 }
 
+var testsUnmarshalTrapWrongCommunity = []struct {
+	in  func() []byte
+	out *SnmpPacket
+}{
+	{genericV1Trap,
+		&SnmpPacket{
+			Version:   Version1,
+			PDUType:   SNMPv2Trap,
+			Community: "wrongcommunitystring",
+			RequestID: 957979745,
+		},
+	},
+}
+
+func TestUnmarshalTrapWrongCommunity(t *testing.T) {
+	Default.Logger = NewLogger(log.New(ioutil.Discard, "", 0))
+	Default.Community = "public"
+SANITY:
+	for i, test := range testsUnmarshalTrapWrongCommunity {
+
+		Default.SecurityParameters = test.out.SecurityParameters.Copy()
+		Default.Version = Version2c
+		var buf = test.in()
+		res, err := Default.UnmarshalTrap(buf, true)
+		require.NoError(t, err, "unmarshalTrap failed")
+		if res == nil {
+			t.Errorf("#%d, UnmarshalTrap returned nil", i)
+			continue SANITY
+		}
+
+		// test enough fields fields to ensure unmarshalling was successful.
+		// full unmarshal testing is performed in TestUnmarshal
+		if res.Version != test.out.Version {
+			t.Errorf("#%d Version result: %v, test: %v", i, res.Version, test.out.Version)
+		}
+		if res.RequestID != test.out.RequestID {
+			t.Errorf("#%d RequestID result: %v, test: %v", i, res.RequestID, test.out.RequestID)
+		}
+	}
+}
+
 func genericV3Trap() []byte {
 	return []byte{
 		0x30, 0x81, 0xd7, 0x02, 0x01, 0x03, 0x30, 0x11, 0x02, 0x04, 0x62, 0xaf,
@@ -385,7 +426,84 @@ func TestSendTrapWithoutWaitingOnListen(t *testing.T) {
 	}
 }
 
-// test sending a basic SNMP trap, using our own listener to receive
+// test sending a basic SNMP trap with an empty community string, using our own listener to receive
+func TestSendV1TrapNoCommunity(t *testing.T) {
+	done := make(chan int)
+
+	tl := NewTrapListener()
+	defer tl.Close()
+
+	tl.OnNewTrap = makeTestTrapHandler(t, done, Version1)
+	tl.Params = &GoSNMP{
+		Port:               161,
+		Transport:          udp,
+		Community:          "",
+		Version:            Version2c,
+		Timeout:            time.Duration(2) * time.Second,
+		Retries:            3,
+		ExponentialTimeout: true,
+		MaxOids:            MaxOids,
+	}
+	// listener goroutine
+	errch := make(chan error)
+	go func() {
+		err := tl.Listen(net.JoinHostPort(trapTestAddress, trapTestPortString))
+		if err != nil {
+			errch <- err
+		}
+	}()
+
+	// Wait until the listener is ready.
+	select {
+	case <-tl.Listening():
+	case err := <-errch:
+		t.Fatalf("error in listen: %v", err)
+	}
+
+	ts := &GoSNMP{
+		Target:    trapTestAddress,
+		Port:      trapTestPort,
+		Version:   Version1,
+		Community: "",
+		Timeout:   time.Duration(2) * time.Second,
+		Retries:   3,
+		MaxOids:   MaxOids,
+	}
+
+	err := ts.Connect()
+	if err != nil {
+		t.Fatalf("Connect() err: %v", err)
+	}
+	defer ts.Conn.Close()
+
+	pdu := SnmpPDU{
+		Name:  trapTestOid,
+		Type:  OctetString,
+		Value: trapTestPayload,
+	}
+
+	trap := SnmpTrap{
+		Variables:    []SnmpPDU{pdu},
+		Enterprise:   trapTestEnterpriseOid,
+		AgentAddress: trapTestAgentAddress,
+		GenericTrap:  trapTestGenericTrap,
+		SpecificTrap: trapTestSpecificTrap,
+		Timestamp:    trapTestTimestamp,
+	}
+
+	if _, err := ts.SendTrap(trap); err != nil {
+		t.Fatalf("SendTrap() err: %v", err)
+	}
+
+	// wait for response from handler
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for trap to be received")
+	}
+}
+
+// test sending a basic SNMP trap with Community, using our own listener to receive
 func TestSendV1Trap(t *testing.T) {
 	done := make(chan int)
 
@@ -394,6 +512,7 @@ func TestSendV1Trap(t *testing.T) {
 
 	tl.OnNewTrap = makeTestTrapHandler(t, done, Version1)
 	tl.Params = Default
+	tl.Params.Community = "public"
 
 	// listener goroutine
 	errch := make(chan error)
@@ -412,13 +531,13 @@ func TestSendV1Trap(t *testing.T) {
 	}
 
 	ts := &GoSNMP{
-		Target: trapTestAddress,
-		Port:   trapTestPort,
-		//Community: "public",
-		Version: Version1,
-		Timeout: time.Duration(2) * time.Second,
-		Retries: 3,
-		MaxOids: MaxOids,
+		Target:    trapTestAddress,
+		Port:      trapTestPort,
+		Community: "public",
+		Version:   Version1,
+		Timeout:   time.Duration(2) * time.Second,
+		Retries:   3,
+		MaxOids:   MaxOids,
 	}
 
 	err := ts.Connect()

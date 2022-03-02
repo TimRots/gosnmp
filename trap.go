@@ -438,8 +438,8 @@ func (x *GoSNMP) UnmarshalTrap(trap []byte, useResponseSecurityParameters bool) 
 		x.Logger.Printf("UnmarshalTrap: %s\n", err)
 		return nil, err
 	}
-
-	if result.Version == Version3 {
+	switch result.Version {
+	case Version3:
 		if result.SecurityModel == UserSecurityModel {
 			err = x.testAuthentication(trap, result, useResponseSecurityParameters)
 			if err != nil {
@@ -452,6 +452,10 @@ func (x *GoSNMP) UnmarshalTrap(trap []byte, useResponseSecurityParameters bool) 
 		if err != nil {
 			x.Logger.Printf("UnmarshalTrap v3 decrypt: %s\n", err)
 			return nil, err
+		}
+	case Version2c, Version1:
+		if result.Community != x.Community {
+			return nil, fmt.Errorf("UnmarshalTrap %v community %v does not match", result.Version, result.Community)
 		}
 	}
 	err = x.unmarshalPayload(trap, cursor, result)

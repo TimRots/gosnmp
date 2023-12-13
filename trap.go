@@ -148,7 +148,7 @@ const defaultCloseTimeout = 3 * time.Second
 // is no need for the application to handle Informs any different than Traps.
 // Nonetheless, the packet's Type field can be examined to determine what type
 // of event this is for e.g. statistics gathering functions, etc.
-type TrapHandlerFunc func(s *SnmpPacket, u *net.UDPAddr)
+type TrapHandlerFunc func(s *SnmpPacket, u net.Addr)
 
 // NewTrapListener returns an initialized TrapListener.
 //
@@ -341,8 +341,12 @@ func (t *TrapListener) reportAuthoritativeEngineID(trap *SnmpPacket, snmpEngineI
 }
 
 func (t *TrapListener) handleTCPRequest(conn net.Conn) {
+	// Close the connection when we are done with it.
+	defer conn.Close()
+
 	// Make a buffer to hold incoming data.
 	buf := make([]byte, 4096)
+
 	// Read the incoming connection into the buffer.
 	reqLen, err := conn.Read(buf)
 	if err != nil {
@@ -356,11 +360,8 @@ func (t *TrapListener) handleTCPRequest(conn net.Conn) {
 		t.Params.Logger.Printf("TrapListener: error in read %s\n", err)
 		return
 	}
-	// TODO: lying for backward compatibility reason - create UDP Address ... not nice
-	r, _ := net.ResolveUDPAddr("", conn.RemoteAddr().String())
-	t.OnNewTrap(traps, r)
-	// Close the connection when you're done with it.
-	conn.Close()
+
+	t.OnNewTrap(traps, conn.RemoteAddr())
 }
 
 func (t *TrapListener) listenTCP(addr string) error {
@@ -436,7 +437,7 @@ func (t *TrapListener) Listen(addr string) error {
 }
 
 // Default trap handler
-func (t *TrapListener) debugTrapHandler(s *SnmpPacket, u *net.UDPAddr) {
+func (t *TrapListener) debugTrapHandler(s *SnmpPacket, u net.Addr) {
 	t.Params.Logger.Printf("got trapdata from %+v: %+v\n", u, s)
 }
 

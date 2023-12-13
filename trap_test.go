@@ -106,9 +106,9 @@ func genericV3Trap() []byte {
 		0x04, 0x05}
 }
 
-func makeTestTrapHandler(t *testing.T, done chan int, version SnmpVersion) func(*SnmpPacket, *net.UDPAddr) {
+func makeTestTrapHandler(t *testing.T, done chan int, version SnmpVersion) func(*SnmpPacket, net.Addr) {
 	Default.Logger = NewLogger(log.New(io.Discard, "", 0))
-	return func(packet *SnmpPacket, addr *net.UDPAddr) {
+	return func(packet *SnmpPacket, addr net.Addr) {
 		//log.Printf("got trapdata from %s\n", addr.IP)
 		defer close(done)
 
@@ -1305,4 +1305,52 @@ func TestSendV3EngineIdDiscovery(t *testing.T) {
 	require.NoError(t, err, "sendOneRequest failed")
 	require.Equal(t, result.SecurityParameters.(*UsmSecurityParameters).AuthoritativeEngineID, authorativeEngineID, "invalid authoritativeEngineID")
 	require.Equal(t, result.PDUType, Report, "invalid received PDUType")
+}
+
+func TestTrapHandlerFuncWithTCPAddr(t *testing.T) {
+	tl := NewTrapListener()
+
+	fakePacket := &SnmpPacket{}
+	fakeAddr := &net.TCPAddr{
+		IP:   net.IPv4(127, 0, 0, 1),
+		Port: 12345,
+	}
+
+	called := false
+	tl.OnNewTrap = func(s *SnmpPacket, u net.Addr) {
+		called = true
+		if _, ok := u.(*net.TCPAddr); !ok {
+			t.Errorf("expected TCPAddr but got %T", u)
+		}
+	}
+
+	tl.OnNewTrap(fakePacket, fakeAddr)
+
+	if !called {
+		t.Errorf("OnNewTrap not called")
+	}
+}
+
+func TestTrapHandlerFuncWithUDPAddr(t *testing.T) {
+	tl := NewTrapListener()
+
+	fakePacket := &SnmpPacket{}
+	fakeAddr := &net.UDPAddr{
+		IP:   net.IPv4(127, 0, 0, 1),
+		Port: 12345,
+	}
+
+	called := false
+	tl.OnNewTrap = func(s *SnmpPacket, u net.Addr) {
+		called = true
+		if _, ok := u.(*net.UDPAddr); !ok {
+			t.Errorf("expected UDPAddr but got %T", u)
+		}
+	}
+
+	tl.OnNewTrap(fakePacket, fakeAddr)
+
+	if !called {
+		t.Errorf("OnNewTrap not called")
+	}
 }

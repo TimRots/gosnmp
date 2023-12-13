@@ -41,7 +41,7 @@ func main() {
 	}
 }
 
-func myTrapHandler(packet *g.SnmpPacket, addr *net.UDPAddr) {
+func myTrapHandler(packet *g.SnmpPacket, addr net.Addr) {
 	log.Printf("got trapdata from %s\n", addr.IP)
 	for _, v := range packet.Variables {
 		switch v.Type {
